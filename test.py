@@ -1,11 +1,13 @@
 import cv2
-import mediapipe as mp
-from PIL import Image, ImageSequence
 import numpy as np
+import mediapipe as mp
 
-def load_gif_frames(gif_path):
-    gif = Image.open(gif_path)
-    frames = [frame.copy() for frame in ImageSequence.Iterator(gif)]
+from PIL import Image, ImageSequence
+import time
+
+def load_apng_frames(apng_path):
+    apng = Image.open(apng_path)
+    frames = [frame.copy() for frame in ImageSequence.Iterator(apng)]
     return frames
 
 def resize_overlay(overlay, scale):
@@ -38,7 +40,7 @@ def overlay_image(background, overlay, position):
     overlay_cropped = overlay[:ol_crop_height, :ol_crop_width]
 
     mask = overlay_cropped[..., 3:] / 255.0
-    mask = np.repeat(mask, 3, axis=2)  # 마스크를 3채널로 확장
+    mask = np.repeat(mask, 3, axis=2)  # Expand mask to 3 channels
     overlay_rgb = overlay_cropped[..., :3]
 
     background[y:y+ol_crop_height, x:x+ol_crop_width] = \
@@ -50,13 +52,17 @@ def overlay_image(background, overlay, position):
 mp_drawing = mp.solutions.drawing_utils
 mp_face_mesh = mp.solutions.face_mesh
 
-# GIF 파일 로드 및 크기 조정
-gif_frames = load_gif_frames("elephant.png")
-gif_frames = [remove_background(frame) for frame in gif_frames]  # 배경 제거
-scale_factor = 0.3  # GIF 크기 축소 비율
+# APNG 파일 로드 및 크기 조정
+apng_frames = load_apng_frames("elephant.png")
+apng_frames = [remove_background(frame) for frame in apng_frames]  # 배경 제거
+scale_factor = 0.3  # APNG 크기 축소 비율
 
 cap = cv2.VideoCapture("face1.mp4")
 drawing_spec = mp_drawing.DrawingSpec(thickness=2, circle_radius=2, color=(0, 255, 0))
+
+# APNG를 1초 동안만 실행하도록 설정
+start_time = time.time()
+duration = 10  # 1초
 
 with mp_face_mesh.FaceMesh(
     max_num_faces=1,
@@ -104,21 +110,27 @@ with mp_face_mesh.FaceMesh(
                     y = int(landmark.y * image.shape[0])
                     cv2.circle(image, (x, y), drawing_spec.circle_radius, drawing_spec.color, drawing_spec.thickness)
         
-        # GIF 프레임을 비디오 프레임 위에 오버레이
-        gif_frame = gif_frames[frame_index % len(gif_frames)]
-        gif_frame_resized = resize_overlay(gif_frame, scale_factor)
-        gif_frame_np = cv2.cvtColor(np.array(gif_frame_resized), cv2.COLOR_RGBA2BGRA)
-        
-        # GIF를 화면 중앙에 위치시키기 위해 위치 계산
-        gif_x = (image.shape[1] - gif_frame_np.shape[1]) // 2
-        gif_y = (image.shape[0] - gif_frame_np.shape[0]) // 2
+        # Check if the current time is within the 1-second window
+        elapsed_time = time.time() - start_time
+        if elapsed_time <= duration:
+            # APNG 프레임을 비디오 프레임 위에 오버레이
+            apng_frame = apng_frames[frame_index % len(apng_frames)]
+            apng_frame_resized = resize_overlay(apng_frame, scale_factor)
+            apng_frame_np = cv2.cvtColor(np.array(apng_frame_resized), cv2.COLOR_RGBA2BGRA)
+            
+            # APNG를 화면 중앙에 위치시키기 위해 위치 계산
+            apng_x = (image.shape[1] - apng_frame_np.shape[1]) // 2
+            apng_y = (image.shape[0] - apng_frame_np.shape[0]) // 2
 
-        image = overlay_image(image, gif_frame_np, (gif_x, gif_y))
+            image = overlay_image(image, apng_frame_np, (apng_x, apng_y))
 
-        frame_index += 1
+            frame_index += 1
+        else:
+            # 1초가 지나면 APNG를 제거하거나 대체 이미지로 변경
+            pass
 
         # Flip the image horizontally for a selfie-view display.
-        cv2.imshow('MediaPipe Face Mesh with GIF Overlay', cv2.flip(image, 1))
+        cv2.imshow('MediaPipe Face Mesh with APNG Overlay', cv2.flip(image, 1))
         if cv2.waitKey(5) & 0xFF == 27:
             break
             
