@@ -51,7 +51,7 @@ mp_drawing = mp.solutions.drawing_utils
 mp_face_mesh = mp.solutions.face_mesh
 
 # GIF 파일 로드 및 크기 조정
-gif_frames = load_gif_frames("test.gif")
+gif_frames = load_gif_frames("elephant.png")
 gif_frames = [remove_background(frame) for frame in gif_frames]  # 배경 제거
 scale_factor = 0.3  # GIF 크기 축소 비율
 
