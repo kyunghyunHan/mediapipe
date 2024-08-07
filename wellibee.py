@@ -8,6 +8,10 @@ drawing_spec = mp_drawing.DrawingSpec(thickness=2, circle_radius=2, color=(0, 25
 cap = cv2.VideoCapture("./video/face2.mp4")
 mb_executed = False
 default_lib_x = 0
+default_lib_inner_y = 0
+default_lib_outer_y = 0
+face_y =0
+
 with mp_face_mesh.FaceMesh(
     max_num_faces=1,
     refine_landmarks=True,
@@ -29,47 +33,99 @@ with mp_face_mesh.FaceMesh(
 
     if results.multi_face_landmarks:
       for face_landmarks in results.multi_face_landmarks:
+        # mp_drawing.draw_landmarks(
+        #       image=image,
+        #       landmark_list=face_landmarks,
+        #       connections=mp_face_mesh.FACEMESH_CONTOURS,  # 얼굴 랜드마크의 연결선
+        #       landmark_drawing_spec=drawing_spec,  # 랜드마크 점 스타일
+        #       connection_drawing_spec=mp_drawing.DrawingSpec(thickness=1, circle_radius=1, color=(0, 255, 0))  # 연결선 스타일
+        #   )
+        face_top_idx= 10
+        face_buttom_idx= 152
+
+        middle_outer_top_lib_idx =0
+        middle_outer_buttom_lib_idx =17
+        middle_inner_top_lip_idx = 13
+        middle_inner_buttom_lip_idx = 14
         left_lip_idx = 61
         right_lip_idx = 291
-        middle_top_lip_idx = 13
-        middle_buttom_lip_idx = 14
 
+        ## 얼굴 
+        face_top_landmarks = face_landmarks.landmark[face_top_idx]
+        face_buttom_landmarks = face_landmarks.landmark[face_buttom_idx]
+        ## 입
         left_lip_landmark = face_landmarks.landmark[left_lip_idx]
         right_lip_landmark = face_landmarks.landmark[right_lip_idx]
-        middle_top_landmark = face_landmarks.landmark[middle_top_lip_idx]
-        middle_buttom_landmark = face_landmarks.landmark[middle_buttom_lip_idx]
+        middle_outer_top_landmark = face_landmarks.landmark[middle_outer_top_lib_idx]
+        middle_outer_buttom_landmark = face_landmarks.landmark[middle_outer_buttom_lib_idx]
 
+
+        middle_inner_top_landmark = face_landmarks.landmark[middle_inner_top_lip_idx]
+        middle_inner_buttom_landmark = face_landmarks.landmark[middle_inner_buttom_lip_idx]
+
+        #얼굴
+        face_top_x = int(face_top_landmarks.x * image.shape[1])
+        face_top_y = int(face_top_landmarks.y * image.shape[0])
+        face_buttom_x = int(face_buttom_landmarks.x * image.shape[1])
+        face_buttom_y = int(face_buttom_landmarks.y * image.shape[0])
+        #왼쪽 끝
         left_lip_x = int(left_lip_landmark.x * image.shape[1])
         left_lip_y = int(left_lip_landmark.y * image.shape[0])
-        middle_top_lib_x = int(middle_top_landmark.x * image.shape[1])
-        middle_top_lib_y = int(middle_top_landmark.y * image.shape[0])
-        middle_buttom_lib_x = int(middle_buttom_landmark.x * image.shape[1])
-        middle_buttom_lib_y = int(middle_buttom_landmark.y * image.shape[0])
+        #가운데 바깥쪽 위
+        middle_outer_top_lib_x = int(middle_outer_top_landmark.x * image.shape[1])
+        middle_outer_top_lib_y = int(middle_outer_top_landmark.y * image.shape[0])
+        middle_outer_buttom_lib_x = int(middle_outer_buttom_landmark.x * image.shape[1])
+        middle_outer_buttom_lib_y = int(middle_outer_buttom_landmark.y * image.shape[0])
+        #
+        middle_inner_top_lib_x = int(middle_inner_top_landmark.x * image.shape[1])
+        middle_inner_top_lib_y = int(middle_inner_top_landmark.y * image.shape[0])
+        middle_inner_buttom_lib_x = int(middle_inner_buttom_landmark.x * image.shape[1])
+        middle_inner_buttom_lib_y = int(middle_inner_buttom_landmark.y * image.shape[0])
+
         right_lip_x = int(right_lip_landmark.x * image.shape[1])
         right_lip_y = int(right_lip_landmark.y * image.shape[0])
-        max_lip_x = right_lip_x - left_lip_x  # 입술 세로길이
-        max_in_lip_y = middle_buttom_lib_y - middle_top_lib_y  # 안쪽 입술 가로
         
+        max_lip_x = right_lip_x - left_lip_x  # 입술 세로길이
+        max_inner_lip_y = middle_inner_buttom_lib_y - middle_inner_top_lib_y  # 안쪽 입술 가로
+        max_outer_lip_y = middle_outer_buttom_lib_y - middle_outer_top_lib_y  # 안쪽 입술 가로
+
        
 
         print(f"왼쪽 입술 끝 좌표: ({left_lip_x}, {left_lip_y})")
         print(f"오른쪽 입술 끝 좌표: ({right_lip_x}, {right_lip_y})")
-        print(f"가운데 윗 입술  좌표: ({middle_top_lib_x}, {middle_top_lib_y})")
-        print(f"가운데 아래 입술  좌표: ({middle_buttom_lib_x}, {middle_buttom_lib_y})")
+        print(f"가운데 inner 윗 입술  좌표: ({middle_inner_top_lib_x}, {middle_inner_top_lib_y})")
+        print(f"가운데 inner 아래 입술  좌표: ({middle_inner_buttom_lib_x}, {middle_inner_buttom_lib_y})")
+        print(f"가운데 outer 윗 입술  좌표: ({middle_outer_top_lib_x}, {middle_outer_top_lib_y})")
+        print(f"가운데 outer 아래 입술  좌표: ({middle_outer_buttom_lib_x}, {middle_outer_buttom_lib_y})")
 
         print(f"입술 가로길이:({max_lip_x})")
-        print(f"입술 세로길이:({max_in_lip_y})")
+        print(f"입술 inner 세로길이:({max_inner_lip_y})")
+        print(f"입술 outer 세로길이:({max_outer_lip_y})")
+
         if not mb_executed:
-            print("이게왜와>")
             default_lib_x = max_lip_x
+            default_lib_inner_y = max_inner_lip_y
+            default_lib_outer_y = max_outer_lip_y
+
             mb_executed = True
         
         
         #입술 길이 82  60  120 75
         #최대길이 127  90  180 110
 
-        cv2.circle(image, (middle_top_lib_x, middle_top_lib_y), drawing_spec.circle_radius, (0, 0, 255), drawing_spec.thickness)
-        cv2.circle(image, (middle_buttom_lib_x, middle_buttom_lib_y), drawing_spec.circle_radius, (255, 0, 255), drawing_spec.thickness)
+        # o 5 72
+        # u 0
+
+        #얼굴
+        cv2.circle(image, (face_top_x, face_top_y), drawing_spec.circle_radius, (0, 0, 255), drawing_spec.thickness)
+        cv2.circle(image, (face_buttom_x, face_buttom_y), drawing_spec.circle_radius, (0, 0, 255), drawing_spec.thickness)
+
+        #입
+        cv2.circle(image, (middle_outer_top_lib_x, middle_outer_top_lib_y), drawing_spec.circle_radius, (0, 0, 255), drawing_spec.thickness)
+        cv2.circle(image, (middle_outer_buttom_lib_x, middle_outer_buttom_lib_y), drawing_spec.circle_radius, (0, 0, 255), drawing_spec.thickness)
+
+        cv2.circle(image, (middle_inner_top_lib_x, middle_inner_top_lib_y), drawing_spec.circle_radius, (0, 0, 255), drawing_spec.thickness)
+        cv2.circle(image, (middle_inner_buttom_lib_x, middle_inner_buttom_lib_y), drawing_spec.circle_radius, (255, 0, 255), drawing_spec.thickness)
         cv2.circle(image, (left_lip_x, left_lip_y), drawing_spec.circle_radius, (255, 0, 0), drawing_spec.thickness)
         cv2.circle(image, (right_lip_x, right_lip_y), drawing_spec.circle_radius, (0, 0, 255), drawing_spec.thickness)
 
