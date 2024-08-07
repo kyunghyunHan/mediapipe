@@ -38,7 +38,7 @@ with mp_face_mesh.FaceMesh(
         left_lip_idx = 61
         right_lip_idx = 291
         middle_top_lip_idx = 13
-        middle_buttom_lip_idx = 300
+        middle_buttom_lip_idx = 14
 
         
 
@@ -54,7 +54,7 @@ with mp_face_mesh.FaceMesh(
         middle_top_lib_y = int(middle_top_landmark.y * image.shape[0])
 
         middle_buttom_lib_x = int(middle_buttom_landmark.x * image.shape[1])
-        middle_buttom_lib_y = int(middle_buttom_landmark.x * image.shape[0])
+        middle_buttom_lib_y = int(middle_buttom_landmark.y * image.shape[0])
 
 
         right_lip_x = int(right_lip_landmark.x * image.shape[1])
@@ -80,11 +80,11 @@ with mp_face_mesh.FaceMesh(
         cv2.circle(image, (right_lip_x, right_lip_y), drawing_spec.circle_radius, (0, 0, 255), drawing_spec.thickness)
 
         # 입술 부분의 랜드마크만 점으로 그리기
-        lip_indices = set([idx for connection in mp_face_mesh.FACEMESH_LIPS for idx in connection])
-        for idx in lip_indices:
-          landmark = face_landmarks.landmark[idx]
-          x = int(landmark.x * image.shape[1])
-          y = int(landmark.y * image.shape[0])
+        # lip_indices = set([idx for connection in mp_face_mesh.FACEMESH_LIPS for idx in connection])
+        # for idx in lip_indices:
+        #   landmark = face_landmarks.landmark[idx]
+        #   x = int(landmark.x * image.shape[1])
+        #   y = int(landmark.y * image.shape[0])
         #   cv2.circle(image, (x, y), drawing_spec.circle_radius, drawing_spec.color, drawing_spec.thickness)
     
     # Flip the image horizontally for a selfie-view display.
