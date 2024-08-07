@@ -4,10 +4,10 @@ import mediapipe as mp
 mp_drawing = mp.solutions.drawing_utils
 mp_face_mesh = mp.solutions.face_mesh
 drawing_spec = mp_drawing.DrawingSpec(thickness=2, circle_radius=2, color=(0, 255, 0))  # 점의 크기와 색상을 설정
-cap = cv2.VideoCapture(0)
-# cap = cv2.VideoCapture("smile.mp4")
+# cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture("./video/face2.mp4")
 mb_executed = False
-test = 0
+default_lib_x = 0
 with mp_face_mesh.FaceMesh(
     max_num_faces=1,
     refine_landmarks=True,
@@ -61,7 +61,7 @@ with mp_face_mesh.FaceMesh(
         print(f"입술 세로길이:({max_in_lip_y})")
         if not mb_executed:
             print("이게왜와>")
-            test = max_lip_x
+            default_lib_x = max_lip_x
             mb_executed = True
         
         
@@ -93,10 +93,22 @@ with mp_face_mesh.FaceMesh(
         text_y = image_center_y + (text_height // 2 )
 
         # 텍스트 그리기
-        print("이거",test*2)
+        print("이거",default_lib_x*2)
         print("이거2",max_lip_x)
-
-        if test *1.25 < max_lip_x :
+        # a
+        if default_lib_x *1.24 < max_lip_x :
+            cv2.putText(image, text, (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
+        ## e 
+        elif default_lib_x *1.25 < max_lip_x :
+            cv2.putText(image, text, (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
+        ## i
+        elif default_lib_x *1.25 < max_lip_x :
+            cv2.putText(image, text, (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
+        ## o
+        elif default_lib_x *1.25 < max_lip_x :
+            cv2.putText(image, text, (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
+        ## u
+        elif default_lib_x *1.25 < max_lip_x :
             cv2.putText(image, text, (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
 
     cv2.imshow('MediaPipe Face Mesh - Lips Only (Dots)', image)
