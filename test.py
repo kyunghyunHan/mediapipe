@@ -53,11 +53,11 @@ mp_drawing = mp.solutions.drawing_utils
 mp_face_mesh = mp.solutions.face_mesh
 
 # APNG 파일 로드 및 크기 조정
-apng_frames = load_apng_frames("elephant.png")
+apng_frames = load_apng_frames("./img/elephant.png")
 apng_frames = [remove_background(frame) for frame in apng_frames]  # 배경 제거
 scale_factor = 0.3  # APNG 크기 축소 비율
 
-cap = cv2.VideoCapture("face1.mp4")
+cap = cv2.VideoCapture("./video/face1.mp4")
 drawing_spec = mp_drawing.DrawingSpec(thickness=2, circle_radius=2, color=(0, 255, 0))
 
 # APNG를 1초 동안만 실행하도록 설정

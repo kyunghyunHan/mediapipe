@@ -2,7 +2,7 @@ import cv2 as cv
 import mediapipe as mp
 
 # cap = cv.VideoCapture(0)
-img =cv.imread('face.jpeg')
+img =cv.imread('./img/face_landmark.jpg')
 
 mp_face_detection = mp.solutions.face_detection
 mp_drawing = mp.solutions.drawing_utils

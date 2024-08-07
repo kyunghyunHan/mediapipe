@@ -79,9 +79,8 @@ with mp_face_mesh.FaceMesh(
         font_thickness = 2
         color = (255, 0, 255)  # 보라색
 
-        # 텍스트 문자열
-        text = "Smile I"
 
+        text ="Smile A"
         # 텍스트 크기 계산
         text_size, _ = cv2.getTextSize(text, font, font_scale, font_thickness)
         text_width, text_height = text_size
@@ -96,20 +95,20 @@ with mp_face_mesh.FaceMesh(
         print("이거",default_lib_x*2)
         print("이거2",max_lip_x)
         # a
-        if default_lib_x *1.24 < max_lip_x :
-            cv2.putText(image, text, (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
-        ## e 
-        elif default_lib_x *1.25 < max_lip_x :
-            cv2.putText(image, text, (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
-        ## i
-        elif default_lib_x *1.25 < max_lip_x :
-            cv2.putText(image, text, (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
-        ## o
-        elif default_lib_x *1.25 < max_lip_x :
-            cv2.putText(image, text, (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
-        ## u
-        elif default_lib_x *1.25 < max_lip_x :
-            cv2.putText(image, text, (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
+        # if default_lib_x *1.24 < max_lip_x :
+        #     cv2.putText(image, "Smile A", (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
+        # ## e 
+        # elif default_lib_x *1.25 < max_lip_x :
+        #     cv2.putText(image, "Smile E", (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
+        # ## i
+        # elif default_lib_x *1.25 < max_lip_x :
+        #     cv2.putText(image, "Smile I", (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
+        # ## o
+        # elif default_lib_x *1.25 < max_lip_x :
+        #     cv2.putText(image, "Smile O", (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
+        # ## u
+        # elif max_in_lip_y<7 and default_lib_x *0.7 > max_lip_x:
+        #     cv2.putText(image, "Smile U", (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
 
     cv2.imshow('MediaPipe Face Mesh - Lips Only (Dots)', image)
 

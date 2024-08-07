@@ -30,7 +30,7 @@ with mp_face_mesh.FaceMesh(
         mp_drawing.draw_landmarks(
             image=image,
             landmark_list=face_landmarks,
-            connections=None,  # 연결을 하지 않음
+            connections=mp_face_mesh.FACEMESH_CONTOURS,  # 연결을 하지 않음
             landmark_drawing_spec=drawing_spec)  # 점의 스타일 적용
     # Flip the image horizontally for a selfie-view display.
     cv2.imshow('MediaPipe Face Mesh - Lips Only (Dots)', cv2.flip(image, 1))
