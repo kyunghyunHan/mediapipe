@@ -4,8 +4,8 @@ import mediapipe as mp
 mp_drawing = mp.solutions.drawing_utils
 mp_face_mesh = mp.solutions.face_mesh
 drawing_spec = mp_drawing.DrawingSpec(thickness=2, circle_radius=2, color=(0, 255, 0))  # 점의 크기와 색상을 설정
-# cap = cv2.VideoCapture(0)
-cap = cv2.VideoCapture("./video/face2.mp4")
+cap = cv2.VideoCapture(0)
+# cap = cv2.VideoCapture("./video/face2.mp4")
 mb_executed = False
 default_lib_x = 0
 default_lib_inner_y = 0
@@ -21,7 +21,7 @@ with mp_face_mesh.FaceMesh(
     success, image = cap.read()
     if not success:
       print("Ignoring empty camera frame.")
-      continue
+      break
 
     image.flags.writeable = False
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
