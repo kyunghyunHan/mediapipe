@@ -9,8 +9,8 @@ mp_face_mesh = mp.solutions.face_mesh
 drawing_spec = mp_drawing.DrawingSpec(thickness=2, circle_radius=2, color=(0, 255, 0))
 
 # Initialize Video Capture (0 for webcam or use a video file)
-cap = cv2.VideoCapture(0)
-
+# cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture("./video/face2.mp4")
 # Initialize variables for landmarks and lip measurements
 mb_executed = False
 default_lib_x = 0
@@ -120,6 +120,16 @@ with open(csv_file, mode='a', newline='') as file:
                     max_inner_lip_y = middle_inner_buttom_lib_y - middle_inner_top_lib_y  # 안쪽 입술 가로
                     max_outer_lip_y = middle_outer_buttom_lib_y - middle_outer_top_lib_y  # 안쪽 입술 가로
 
+                    print(f"왼쪽 입술 끝 좌표: ({left_lip_x}, {left_lip_y})")
+                    print(f"오른쪽 입술 끝 좌표: ({right_lip_x}, {right_lip_y})")
+                    print(f"가운데 inner 윗 입술  좌표: ({middle_inner_top_lib_x}, {middle_inner_top_lib_y})")
+                    print(f"가운데 inner 아래 입술  좌표: ({middle_inner_buttom_lib_x}, {middle_inner_buttom_lib_y})")
+                    print(f"가운데 outer 윗 입술  좌표: ({middle_outer_top_lib_x}, {middle_outer_top_lib_y})")
+                    print(f"가운데 outer 아래 입술  좌표: ({middle_outer_buttom_lib_x}, {middle_outer_buttom_lib_y})")
+                    print(f"입술 가로길이:({max_lip_x})")
+                    print(f"입술 inner 세로길이:({max_inner_lip_y})")
+                    print(f"입술 outer 세로길이:({max_outer_lip_y})")
+        
                     if not mb_executed:
                         default_lib_x = max_lip_x
                         default_lib_inner_y = max_inner_lip_y
@@ -142,11 +152,28 @@ with open(csv_file, mode='a', newline='') as file:
                     font_scale = 1
                     font_thickness = 2
                     color = (255, 0, 255)  # 보라색
-
+                    text ="Smile A"
+                    text_size, _ = cv2.getTextSize(text, font, font_scale, font_thickness)
+                    text_width, text_height = text_size
+                    image_center_x = image.shape[1] // 2
+                    image_center_y = image.shape[0] // 2
+                    text_x = image_center_x - (text_width // 2)
+                    text_y = image_center_y + (text_height // 2 )
                     # 텍스트 그리기 예시 (Smile A 조건)
                     if default_lib_x *1.24 < max_lip_x :
                         cv2.putText(image, "Smile A", (100, 100), font, font_scale, color, font_thickness, cv2.LINE_AA)
-
+                    ## e 
+                    elif default_lib_x *1.25 < max_lip_x :
+                        cv2.putText(image, "Smile E", (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
+                    ## i
+                    elif default_lib_x *1.25 < max_lip_x :
+                        cv2.putText(image, "Smile I", (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
+                    ## o
+                    elif default_lib_x *1.25 < max_lip_x :
+                        cv2.putText(image, "Smile O", (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
+                    ## u
+                    elif max_inner_lip_y<7 and default_lib_x *0.7 > max_lip_x:
+                        cv2.putText(image, "Smile U", (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
                     # CSV에 데이터 저장 (c를 누를 때)
                     if cv2.waitKey(1) == ord('c'):
                         writer.writerow([id_counter, left_lip_x, left_lip_y, right_lip_x, right_lip_y, 
