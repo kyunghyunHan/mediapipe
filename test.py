@@ -109,7 +109,8 @@ with mp_face_mesh.FaceMesh(
                     x = int(landmark.x * image.shape[1])
                     y = int(landmark.y * image.shape[0])
                     cv2.circle(image, (x, y), drawing_spec.circle_radius, drawing_spec.color, drawing_spec.thickness)
-        
+                
+
         # Check if the current time is within the 1-second window
         elapsed_time = time.time() - start_time
         if elapsed_time <= duration:

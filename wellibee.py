@@ -2,6 +2,7 @@ import cv2
 import mediapipe as mp
 import csv
 import os
+import math
 
 # Initialize MediaPipe Face Mesh and Drawing Utilities
 mp_drawing = mp.solutions.drawing_utils
@@ -146,7 +147,9 @@ with open(csv_file, mode='a', newline='') as file:
                     cv2.circle(image, (middle_inner_buttom_lib_x, middle_inner_buttom_lib_y), drawing_spec.circle_radius, (255, 0, 255), drawing_spec.thickness)
                     cv2.circle(image, (left_lip_x, left_lip_y), drawing_spec.circle_radius, (255, 0, 0), drawing_spec.thickness)
                     cv2.circle(image, (right_lip_x, right_lip_y), drawing_spec.circle_radius, (0, 0, 255), drawing_spec.thickness)
+                    
 
+                    
                     # 텍스트 속성 설정
                     font = cv2.FONT_HERSHEY_SIMPLEX
                     font_scale = 1
@@ -159,6 +162,11 @@ with open(csv_file, mode='a', newline='') as file:
                     image_center_y = image.shape[0] // 2
                     text_x = image_center_x - (text_width // 2)
                     text_y = image_center_y + (text_height // 2 )
+
+                    cv2.line(image, (left_lip_x, left_lip_y), (right_lip_x, right_lip_y), (0, 255, 0), 1)
+
+
+
                     # 텍스트 그리기 예시 (Smile A 조건)
                     if default_lib_x *1.24 < max_lip_x :
                         cv2.putText(image, "Smile A", (100, 100), font, font_scale, color, font_thickness, cv2.LINE_AA)
@@ -181,7 +189,22 @@ with open(csv_file, mode='a', newline='') as file:
                                          max_lip_x, max_inner_lip_y, max_outer_lip_y])
                         print(f"Data saved to CSV with ID: {id_counter}")
                         id_counter += 1
+                    lip_length = math.sqrt((right_lip_x - left_lip_x) ** 2 + (right_lip_y - left_lip_y) ** 2)
 
+                    font = cv2.FONT_HERSHEY_SIMPLEX
+                    font_scale = 0.5
+                    font_thickness = 1
+                    color = (255, 255, 0)  # Yellow color
+                    text = f"Lip Length: {lip_length:.2f}"
+                    text_size, _ = cv2.getTextSize(text, font, font_scale, font_thickness)
+                    text_width, text_height = text_size
+
+                    # Calculate the position of the text (center of the line)
+                    text_x = (left_lip_x + right_lip_x) // 2 - (text_width // 2)
+                    text_y = (left_lip_y + right_lip_y) // 2 - (text_height // 2)
+
+                    # Draw the text
+                    cv2.putText(image, text, (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
             # Show the image with the landmarks
             cv2.imshow('MediaPipe Face Mesh - Lips Only (Dots)', image)
 
