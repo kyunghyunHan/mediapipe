@@ -10,8 +10,8 @@ mp_face_mesh = mp.solutions.face_mesh
 drawing_spec = mp_drawing.DrawingSpec(thickness=2, circle_radius=2, color=(0, 255, 0))
 
 # Initialize Video Capture (0 for webcam or use a video file)
-# cap = cv2.VideoCapture(0)
-cap = cv2.VideoCapture("./video/face2.mp4")
+cap = cv2.VideoCapture(0)
+# cap = cv2.VideoCapture("./video/face2.mp4")
 # Initialize variables for landmarks and lip measurements
 mb_executed = False
 
@@ -19,6 +19,10 @@ default_lib_x = 0
 default_lib_inner_y = 0
 default_lib_outer_y = 0
 default_face_y= 0
+    # Variables for initial frames processing
+initial_frames = 10
+frame_count = 0
+initial_face_y_sum = 0
 
 # CSV file setup
 csv_file = 'lip_measurements.csv'
@@ -125,12 +129,12 @@ with open(csv_file, mode='a', newline='') as file:
                     max_face_y = face_buttom_y - face_top_y  # 안쪽 입술 가로
 
      
-                    print(f"왼쪽 입술 끝 좌표: ({left_lip_x}, {left_lip_y})")
-                    print(f"오른쪽 입술 끝 좌표: ({right_lip_x}, {right_lip_y})")
-                    print(f"가운데 inner 윗 입술  좌표: ({middle_inner_top_lib_x}, {middle_inner_top_lib_y})")
-                    print(f"가운데 inner 아래 입술  좌표: ({middle_inner_buttom_lib_x}, {middle_inner_buttom_lib_y})")
-                    print(f"가운데 outer 윗 입술  좌표: ({middle_outer_top_lib_x}, {middle_outer_top_lib_y})")
-                    print(f"가운데 outer 아래 입술  좌표: ({middle_outer_buttom_lib_x}, {middle_outer_buttom_lib_y})")
+                    # print(f"왼쪽 입술 끝 좌표: ({left_lip_x}, {left_lip_y})")
+                    # print(f"오른쪽 입술 끝 좌표: ({right_lip_x}, {right_lip_y})")
+                    # print(f"가운데 inner 윗 입술  좌표: ({middle_inner_top_lib_x}, {middle_inner_top_lib_y})")
+                    # print(f"가운데 inner 아래 입술  좌표: ({middle_inner_buttom_lib_x}, {middle_inner_buttom_lib_y})")
+                    # print(f"가운데 outer 윗 입술  좌표: ({middle_outer_top_lib_x}, {middle_outer_top_lib_y})")
+                    # print(f"가운데 outer 아래 입술  좌표: ({middle_outer_buttom_lib_x}, {middle_outer_buttom_lib_y})")
                     print(f"입술 가로길이:({max_lip_x})")
                     print(f"입술 inner 세로길이:({max_inner_lip_y})")
                     print(f"입술 outer 세로길이:({max_outer_lip_y})")
@@ -138,13 +142,23 @@ with open(csv_file, mode='a', newline='') as file:
                     print(f"얼굴  세로길이:({default_face_y})")
 
         
-                    if not mb_executed:
-                        default_lib_x = max_lip_x
-                        default_lib_inner_y = max_inner_lip_y
-                        default_lib_outer_y = max_outer_lip_y
-                        default_face_y = max_face_y
-                        mb_executed = True
-                    
+                    # if not mb_executed:
+                    #     default_lib_x = max_lip_x
+                    #     default_lib_inner_y = max_inner_lip_y
+                    #     default_lib_outer_y = max_outer_lip_y
+                    #     default_face_y = max_face_y
+                    #     mb_executed = True
+
+
+                    if frame_count < initial_frames:
+                        initial_face_y_sum += max_face_y
+                        frame_count += 1
+                        if frame_count == initial_frames:
+                            default_face_y = initial_face_y_sum / initial_frames
+                            default_lib_x = max_lip_x
+                            default_lib_inner_y = max_inner_lip_y
+                            default_lib_outer_y = max_outer_lip_y
+                            mb_executed = True
                     # 얼굴과 입술에 대한 시각화 (원 그리기)
                     cv2.circle(image, (face_top_x, face_top_y), drawing_spec.circle_radius, (0, 0, 255), drawing_spec.thickness)
                     cv2.circle(image, (face_buttom_x, face_buttom_y), drawing_spec.circle_radius, (0, 0, 255), drawing_spec.thickness)
@@ -173,25 +187,29 @@ with open(csv_file, mode='a', newline='') as file:
                     cv2.line(image, (left_lip_x, left_lip_y), (right_lip_x, right_lip_y), (0, 255, 0), 1)
                     # cv2.line(image, (middle_inner_top_lib_x, middle_inner_top_lib_y), (middle_inner_buttom_lib_x, middle_inner_buttom_lib_y), (0, 255, 0), 1)
 
-                    print("이거", default_face_y)
-                    print("이거",max_face_y - default_face_y)
+                    print("이거", default_lib_x)
+                    print("이거",default_lib_x *1.25)
+                    print("이거",max_lip_x)
+
+                    # 얼굴길이 287
+
                     # 텍스트 그리기 예시 (Smile A 조건)
-                    if default_lib_x *1.24 < max_lip_x :
+                    if default_lib_x *1.2 < max_lip_x :
                         cv2.putText(image, "Smile A", (100, 100), font, font_scale, color, font_thickness, cv2.LINE_AA)
                     ## e 
-                    elif default_lib_x *1.25 < max_lip_x :
+                    elif default_lib_x *1.25 < max_lip_x and max_face_y-default_face_y >10:
                         cv2.putText(image, "Smile E", (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
                     ## i
-                    elif default_lib_x *1.25 < max_lip_x :
+                    elif max_lip_x - default_lib_x *1.25 <10 and max_face_y-default_face_y <10:
                         cv2.putText(image, "Smile I", (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
                     ## o
                     elif max_inner_lip_y>7 and default_lib_x *0.7 > max_lip_x and max_face_y-default_face_y >10:
                         cv2.putText(image, "Smile O", (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
                     ## u
-                    elif max_inner_lip_y<7 and default_lib_x *0.7 > max_lip_x:
+                    elif max_inner_lip_y<7 and default_lib_x *0.7 > max_lip_x and max_face_y-default_face_y <5:
                         cv2.putText(image, "Smile U", (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
                     # CSV에 데이터 저장 (c를 누를 때)
-                    if cv2.waitKey(1) == ord('c'):
+                    if cv2.waitKey(10) == ord('c'):
                         writer.writerow([id_counter, left_lip_x, left_lip_y, right_lip_x, right_lip_y, 
                                          middle_inner_top_lib_y, middle_inner_buttom_lib_y,
                                          max_lip_x, max_inner_lip_y, max_outer_lip_y])
@@ -218,7 +236,7 @@ with open(csv_file, mode='a', newline='') as file:
             # Show the image with the landmarks
             cv2.imshow('MediaPipe Face Mesh - Lips Only (Dots)', image)
 
-            if cv2.waitKey(1) == ord('q'):
+            if cv2.waitKey(10) == ord('q'):
                 break
 
 # Release resources
