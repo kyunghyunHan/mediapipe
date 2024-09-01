@@ -4,50 +4,42 @@ import csv
 import os
 import math
 
-# Initialize MediaPipe Face Mesh and Drawing Utilities
 mp_drawing = mp.solutions.drawing_utils
 mp_face_mesh = mp.solutions.face_mesh
 drawing_spec = mp_drawing.DrawingSpec(thickness=2, circle_radius=2, color=(0, 255, 0))
 
-# Initialize Video Capture (0 for webcam or use a video file)
-cap = cv2.VideoCapture(0)
-# cap = cv2.VideoCapture("./video/face2.mp4")
-# Initialize variables for landmarks and lip measurements
+
+cap = cv2.VideoCapture("./video/smile.mp4")
+
 mb_executed = False
 
 default_lib_x = 0
 default_lib_inner_y = 0
 default_lib_outer_y = 0
 default_face_y= 0
-    # Variables for initial frames processing
 initial_frames = 10
 frame_count = 0
 initial_face_y_sum = 0
 
-# CSV file setup
 csv_file = 'lip_measurements.csv'
 file_exists = os.path.isfile(csv_file)
-
-# Function to get the last ID from the CSV file
+#csv id 카운터 
 def get_last_id(csv_filename):
     try:
         with open(csv_filename, mode='r') as file:
             reader = csv.reader(file)
-            next(reader)  # Skip header
+            next(reader) 
             last_row = None
             for row in reader:
                 last_row = row
             if last_row:
-                return int(last_row[0])  # Return last ID
+                return int(last_row[0])  
             else:
-                return 0  # Return 0 if the file is empty (except for header)
+                return 0
     except FileNotFoundError:
-        return 0  # Return 0 if the file does not exist
-
-# Initialize ID counter from the last ID in the CSV file
+        return 0 
 id_counter = get_last_id(csv_file) + 1
 
-# Open CSV file for writing/appending
 with open(csv_file, mode='a', newline='') as file:
     writer = csv.writer(file)
 
@@ -142,14 +134,7 @@ with open(csv_file, mode='a', newline='') as file:
                     print(f"얼굴  세로길이:({default_face_y})")
 
         
-                    # if not mb_executed:
-                    #     default_lib_x = max_lip_x
-                    #     default_lib_inner_y = max_inner_lip_y
-                    #     default_lib_outer_y = max_outer_lip_y
-                    #     default_face_y = max_face_y
-                    #     mb_executed = True
-
-
+        
                     if frame_count < initial_frames:
                         initial_face_y_sum += max_face_y
                         frame_count += 1
@@ -185,22 +170,21 @@ with open(csv_file, mode='a', newline='') as file:
                     text_y = image_center_y + (text_height // 2 )
 
                     cv2.line(image, (left_lip_x, left_lip_y), (right_lip_x, right_lip_y), (0, 255, 0), 1)
-                    # cv2.line(image, (middle_inner_top_lib_x, middle_inner_top_lib_y), (middle_inner_buttom_lib_x, middle_inner_buttom_lib_y), (0, 255, 0), 1)
 
                     print("이거", default_lib_x)
                     print("이거",default_lib_x *1.25)
-                    print("이거",max_lip_x)
+                    print("이거",max_lip_x - default_lib_x)
 
                     # 얼굴길이 287
 
                     # 텍스트 그리기 예시 (Smile A 조건)
-                    if default_lib_x *1.2 < max_lip_x :
+                    if default_lib_x *1.2 < max_lip_x and max_face_y-default_face_y >10:
                         cv2.putText(image, "Smile A", (100, 100), font, font_scale, color, font_thickness, cv2.LINE_AA)
                     ## e 
                     elif default_lib_x *1.25 < max_lip_x and max_face_y-default_face_y >10:
                         cv2.putText(image, "Smile E", (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
                     ## i
-                    elif max_lip_x - default_lib_x *1.25 <10 and max_face_y-default_face_y <10:
+                    elif max_lip_x - default_lib_x >80 and max_face_y-default_face_y <10:
                         cv2.putText(image, "Smile I", (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
                     ## o
                     elif max_inner_lip_y>7 and default_lib_x *0.7 > max_lip_x and max_face_y-default_face_y >10:
@@ -225,15 +209,12 @@ with open(csv_file, mode='a', newline='') as file:
                     text_size, _ = cv2.getTextSize(text, font, font_scale, font_thickness)
                     text_width, text_height = text_size
 
-                    # Calculate the position of the text (center of the line)
                     text_x = (left_lip_x + right_lip_x) // 2 - (text_width // 2)
                     text_y = (left_lip_y + right_lip_y) // 2 - (text_height // 2)
 
-                    # Draw the text
                     cv2.putText(image, text, (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
                     cv2.putText(image, text, (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
 
-            # Show the image with the landmarks
             cv2.imshow('MediaPipe Face Mesh - Lips Only (Dots)', image)
 
             if cv2.waitKey(10) == ord('q'):
