@@ -1,225 +1,131 @@
 import cv2
 import mediapipe as mp
-import csv
-import os
-import math
+import numpy as np
 
 mp_drawing = mp.solutions.drawing_utils
 mp_face_mesh = mp.solutions.face_mesh
-drawing_spec = mp_drawing.DrawingSpec(thickness=2, circle_radius=2, color=(0, 255, 0))
 
+# 전문가와 자신의 영상 경로
+expert_video_path = "./video/face1.mp4"
+expert_video_path = "./video/smile.mp4"
 
-cap = cv2.VideoCapture("./video/smile.mp4")
+my_video_path = "./video/face2.mp4"
+my_video_path = 0
 
-mb_executed = False
+# 전문가 영상과 자신의 영상 각각 열기
+cap_expert = cv2.VideoCapture(expert_video_path)
+cap_my = cv2.VideoCapture(my_video_path)
 
-default_lib_x = 0
-default_lib_inner_y = 0
-default_lib_outer_y = 0
-default_face_y= 0
-initial_frames = 10
-frame_count = 0
-initial_face_y_sum = 0
+# 입술 전체의 랜드마크 인덱스 (Mediapipe 기준)
+lip_landmark_indices = [
+    61, 185, 40, 39, 37, 0, 267, 269, 270, 409,  # 바깥쪽 입술
+    78, 95, 88, 178, 87, 14, 317, 402, 318, 324  # 안쪽 입술
+]
 
-csv_file = 'lip_measurements.csv'
-file_exists = os.path.isfile(csv_file)
-#csv id 카운터 
-def get_last_id(csv_filename):
-    try:
-        with open(csv_filename, mode='r') as file:
-            reader = csv.reader(file)
-            next(reader) 
-            last_row = None
-            for row in reader:
-                last_row = row
-            if last_row:
-                return int(last_row[0])  
-            else:
-                return 0
-    except FileNotFoundError:
-        return 0 
-id_counter = get_last_id(csv_file) + 1
+# 코사인 유사도 계산 함수
+def cosine_similarity(vec1, vec2):
+    dot_product = np.dot(vec1, vec2)
+    norm_vec1 = np.linalg.norm(vec1)
+    norm_vec2 = np.linalg.norm(vec2)
+    return dot_product / (norm_vec1 * norm_vec2)
 
-with open(csv_file, mode='a', newline='') as file:
-    writer = csv.writer(file)
+# 비율 유지 리사이즈 함수
+def resize_with_aspect_ratio(image, target_width):
+    height, width = image.shape[:2]
+    aspect_ratio = width / height
+    target_height = int(target_width / aspect_ratio)
+    resized_image = cv2.resize(image, (target_width, target_height))
+    return resized_image
 
-    # Write header if file does not exist
-    if not file_exists:
-        writer.writerow(['ID', 'Left_Lip_X', 'Left_Lip_Y', 'Right_Lip_X', 'Right_Lip_Y', 
-                         'Middle_Inner_Top_Lip_Y', 'Middle_Inner_Bottom_Lip_Y',
-                         'Lip_Width', 'Inner_Lip_Height', 'Outer_Lip_Height'])
+with mp_face_mesh.FaceMesh(
+    max_num_faces=1,
+    refine_landmarks=True,
+    min_detection_confidence=0.5,
+    min_tracking_confidence=0.5) as face_mesh:
 
-    with mp_face_mesh.FaceMesh(
-        max_num_faces=1,
-        refine_landmarks=True,
-        min_detection_confidence=0.5,
-        min_tracking_confidence=0.5) as face_mesh:
+    while cap_expert.isOpened() and cap_my.isOpened():
+        success_expert, image_expert = cap_expert.read()
+        success_my, image_my = cap_my.read()
 
-        while cap.isOpened():
-            success, image = cap.read()
-            if not success:
-                print("Ignoring empty camera frame.")
-                break
+        if not success_expert or not success_my:
+            print("Ignoring empty camera frame.")
+            break
 
-            image.flags.writeable = False
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            results = face_mesh.process(image)
+        # 두 영상의 크기 구하기
+        expert_height, expert_width = image_expert.shape[:2]
+        my_height, my_width = image_my.shape[:2]
 
-            image.flags.writeable = True
-            image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        # 두 영상의 최대 너비 설정 (조정할 너비)
+        target_width = 640  # 원하는 너비 설정
 
-            if results.multi_face_landmarks:
-                for face_landmarks in results.multi_face_landmarks:
-                    face_top_idx= 10
-                    face_buttom_idx= 152
+        # 비율 유지하면서 리사이즈
+        image_expert = resize_with_aspect_ratio(image_expert, target_width)
+        image_my = resize_with_aspect_ratio(image_my, target_width)
 
-                    middle_outer_top_lib_idx =0
-                    middle_outer_buttom_lib_idx =17
-                    middle_inner_top_lip_idx = 13
-                    middle_inner_buttom_lip_idx = 14
-                    left_lip_idx = 61
-                    right_lip_idx = 291
+        # 크기 조정 후 최종 높이와 너비 구하기
+        target_height = max(image_expert.shape[0], image_my.shape[0])
+        image_expert = cv2.resize(image_expert, (target_width, target_height))
+        image_my = cv2.resize(image_my, (target_width, target_height))
 
-                    ## 얼굴 
-                    face_top_landmarks = face_landmarks.landmark[face_top_idx]
-                    face_buttom_landmarks = face_landmarks.landmark[face_buttom_idx]
-                    ## 입
-                    left_lip_landmark = face_landmarks.landmark[left_lip_idx]
-                    right_lip_landmark = face_landmarks.landmark[right_lip_idx]
-                    middle_outer_top_landmark = face_landmarks.landmark[middle_outer_top_lib_idx]
-                    middle_outer_buttom_landmark = face_landmarks.landmark[middle_outer_buttom_lib_idx]
+        # Mediapipe를 위한 이미지 전처리 (전문가와 내 영상 각각)
+        image_expert_rgb = cv2.cvtColor(image_expert, cv2.COLOR_BGR2RGB)
+        results_expert = face_mesh.process(image_expert_rgb)
 
+        image_my_rgb = cv2.cvtColor(image_my, cv2.COLOR_BGR2RGB)
+        results_my = face_mesh.process(image_my_rgb)
 
-                    middle_inner_top_landmark = face_landmarks.landmark[middle_inner_top_lip_idx]
-                    middle_inner_buttom_landmark = face_landmarks.landmark[middle_inner_buttom_lip_idx]
+        # 각 영상의 입술 좌표 추출
+        expert_lip_points = []
+        my_lip_points = []
 
-                    #얼굴
-                    face_top_x = int(face_top_landmarks.x * image.shape[1])
-                    face_top_y = int(face_top_landmarks.y * image.shape[0])
-                    face_buttom_x = int(face_buttom_landmarks.x * image.shape[1])
-                    face_buttom_y = int(face_buttom_landmarks.y * image.shape[0])
-                    #왼쪽 끝
-                    left_lip_x = int(left_lip_landmark.x * image.shape[1])
-                    left_lip_y = int(left_lip_landmark.y * image.shape[0])
-                    #가운데 바깥쪽 위
-                    middle_outer_top_lib_x = int(middle_outer_top_landmark.x * image.shape[1])
-                    middle_outer_top_lib_y = int(middle_outer_top_landmark.y * image.shape[0])
-                    middle_outer_buttom_lib_x = int(middle_outer_buttom_landmark.x * image.shape[1])
-                    middle_outer_buttom_lib_y = int(middle_outer_buttom_landmark.y * image.shape[0])
-                    #
-                    middle_inner_top_lib_x = int(middle_inner_top_landmark.x * image.shape[1])
-                    middle_inner_top_lib_y = int(middle_inner_top_landmark.y * image.shape[0])
-                    middle_inner_buttom_lib_x = int(middle_inner_buttom_landmark.x * image.shape[1])
-                    middle_inner_buttom_lib_y = int(middle_inner_buttom_landmark.y * image.shape[0])
+        # 전문가 영상에서 입술 좌표 추출
+        if results_expert.multi_face_landmarks:
+            for face_landmarks in results_expert.multi_face_landmarks:
+                for idx in lip_landmark_indices:
+                    x = int(face_landmarks.landmark[idx].x * target_width)
+                    y = int(face_landmarks.landmark[idx].y * target_height)
+                    expert_lip_points.append([x, y])
+                    # 입술 점 그리기
+                    cv2.circle(image_expert, (x, y), 2, (0, 255, 0), -1)
+        else:
+            print("전문가 영상에서 얼굴이 감지되지 않았습니다.")
 
-                    right_lip_x = int(right_lip_landmark.x * image.shape[1])
-                    right_lip_y = int(right_lip_landmark.y * image.shape[0])
-                    #길이측정
-                    max_lip_x = right_lip_x - left_lip_x  # 입술 세로길이
-                    max_inner_lip_y = middle_inner_buttom_lib_y - middle_inner_top_lib_y  # 안쪽 입술 가로
-                    max_outer_lip_y = middle_outer_buttom_lib_y - middle_outer_top_lib_y  # 안쪽 입술 가로
-                    max_face_y = face_buttom_y - face_top_y  # 안쪽 입술 가로
+        # 내 영상에서 입술 좌표 추출
+        if results_my.multi_face_landmarks:
+            for face_landmarks in results_my.multi_face_landmarks:
+                for idx in lip_landmark_indices:
+                    x = int(face_landmarks.landmark[idx].x * target_width)
+                    y = int(face_landmarks.landmark[idx].y * target_height)
+                    my_lip_points.append([x, y])
+                    # 입술 점 그리기
+                    cv2.circle(image_my, (x, y), 2, (0, 255, 0), -1)
+        else:
+            print("내 영상에서 얼굴이 감지되지 않았습니다.")
+        # 코사인 유사도 계산 (입술 좌표가 있을 경우)
+        if expert_lip_points and my_lip_points:
+            expert_lip_points_flat = np.array(expert_lip_points).flatten()
+            my_lip_points_flat = np.array(my_lip_points).flatten()
+            cos_sim = cosine_similarity(expert_lip_points_flat, my_lip_points_flat)
+            print(f"코사인 유사도: {cos_sim:.4f}")
 
-     
-                    # print(f"왼쪽 입술 끝 좌표: ({left_lip_x}, {left_lip_y})")
-                    # print(f"오른쪽 입술 끝 좌표: ({right_lip_x}, {right_lip_y})")
-                    # print(f"가운데 inner 윗 입술  좌표: ({middle_inner_top_lib_x}, {middle_inner_top_lib_y})")
-                    # print(f"가운데 inner 아래 입술  좌표: ({middle_inner_buttom_lib_x}, {middle_inner_buttom_lib_y})")
-                    # print(f"가운데 outer 윗 입술  좌표: ({middle_outer_top_lib_x}, {middle_outer_top_lib_y})")
-                    # print(f"가운데 outer 아래 입술  좌표: ({middle_outer_buttom_lib_x}, {middle_outer_buttom_lib_y})")
-                    print(f"입술 가로길이:({max_lip_x})")
-                    print(f"입술 inner 세로길이:({max_inner_lip_y})")
-                    print(f"입술 outer 세로길이:({max_outer_lip_y})")
-                    print(f"얼굴  세로길이:({max_face_y})")
-                    print(f"얼굴  세로길이:({default_face_y})")
+            # 유사도를 내 영상에 텍스트로 표시
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            font_scale = 1
+            font_thickness = 2
+            color = (255, 0, 0)
+            text = f"Cosine Similarity: {cos_sim:.4f}"
+            cv2.putText(image_my, text, (50, 50), font, font_scale, color, font_thickness, cv2.LINE_AA)
 
-        
-        
-                    if frame_count < initial_frames:
-                        initial_face_y_sum += max_face_y
-                        frame_count += 1
-                        if frame_count == initial_frames:
-                            default_face_y = initial_face_y_sum / initial_frames
-                            default_lib_x = max_lip_x
-                            default_lib_inner_y = max_inner_lip_y
-                            default_lib_outer_y = max_outer_lip_y
-                            mb_executed = True
-                    # 얼굴과 입술에 대한 시각화 (원 그리기)
-                    cv2.circle(image, (face_top_x, face_top_y), drawing_spec.circle_radius, (0, 0, 255), drawing_spec.thickness)
-                    cv2.circle(image, (face_buttom_x, face_buttom_y), drawing_spec.circle_radius, (0, 0, 255), drawing_spec.thickness)
-                    cv2.circle(image, (middle_outer_top_lib_x, middle_outer_top_lib_y), drawing_spec.circle_radius, (0, 0, 255), drawing_spec.thickness)
-                    cv2.circle(image, (middle_outer_buttom_lib_x, middle_outer_buttom_lib_y), drawing_spec.circle_radius, (0, 0, 255), drawing_spec.thickness)
-                    cv2.circle(image, (middle_inner_top_lib_x, middle_inner_top_lib_y), drawing_spec.circle_radius, (0, 0, 255), drawing_spec.thickness)
-                    cv2.circle(image, (middle_inner_buttom_lib_x, middle_inner_buttom_lib_y), drawing_spec.circle_radius, (255, 0, 255), drawing_spec.thickness)
-                    cv2.circle(image, (left_lip_x, left_lip_y), drawing_spec.circle_radius, (255, 0, 0), drawing_spec.thickness)
-                    cv2.circle(image, (right_lip_x, right_lip_y), drawing_spec.circle_radius, (0, 0, 255), drawing_spec.thickness)
-                    
+        # 두 영상을 나란히 붙이기
+        combined_image = np.hstack((image_expert, image_my))
 
-                    
-                    # 텍스트 속성 설정
-                    font = cv2.FONT_HERSHEY_SIMPLEX
-                    font_scale = 1
-                    font_thickness = 2
-                    color = (255, 0, 255)  # 보라색
-                    text ="Smile A"
-                    text_size, _ = cv2.getTextSize(text, font, font_scale, font_thickness)
-                    text_width, text_height = text_size
-                    image_center_x = image.shape[1] // 2
-                    image_center_y = image.shape[0] // 2
-                    text_x = image_center_x - (text_width // 2)
-                    text_y = image_center_y + (text_height // 2 )
+        # 결과 화면 출력
+        cv2.imshow('Expert vs My Video', combined_image)
 
-                    cv2.line(image, (left_lip_x, left_lip_y), (right_lip_x, right_lip_y), (0, 255, 0), 1)
-
-                    print("이거", default_lib_x)
-                    print("이거",default_lib_x *1.25)
-                    print("이거",max_lip_x - default_lib_x)
-
-                    # 얼굴길이 287
-
-                    # 텍스트 그리기 예시 (Smile A 조건)
-                    if default_lib_x *1.2 < max_lip_x and max_face_y-default_face_y >10:
-                        cv2.putText(image, "Smile A", (100, 100), font, font_scale, color, font_thickness, cv2.LINE_AA)
-                    ## e 
-                    elif default_lib_x *1.25 < max_lip_x and max_face_y-default_face_y >10:
-                        cv2.putText(image, "Smile E", (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
-                    ## i
-                    elif max_lip_x - default_lib_x >80 and max_face_y-default_face_y <10:
-                        cv2.putText(image, "Smile I", (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
-                    ## o
-                    elif max_inner_lip_y>7 and default_lib_x *0.7 > max_lip_x and max_face_y-default_face_y >10:
-                        cv2.putText(image, "Smile O", (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
-                    ## u
-                    elif max_inner_lip_y<7 and default_lib_x *0.7 > max_lip_x and max_face_y-default_face_y <5:
-                        cv2.putText(image, "Smile U", (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
-                    # CSV에 데이터 저장 (c를 누를 때)
-                    if cv2.waitKey(10) == ord('c'):
-                        writer.writerow([id_counter, left_lip_x, left_lip_y, right_lip_x, right_lip_y, 
-                                         middle_inner_top_lib_y, middle_inner_buttom_lib_y,
-                                         max_lip_x, max_inner_lip_y, max_outer_lip_y])
-                        print(f"Data saved to CSV with ID: {id_counter}")
-                        id_counter += 1
-                    lip_length = math.sqrt((right_lip_x - left_lip_x) ** 2 + (right_lip_y - left_lip_y) ** 2)
-
-                    font = cv2.FONT_HERSHEY_SIMPLEX
-                    font_scale = 0.5
-                    font_thickness = 1
-                    color = (255, 255, 0)  # Yellow color
-                    text = f"Lip Length: {lip_length:.2f}"
-                    text_size, _ = cv2.getTextSize(text, font, font_scale, font_thickness)
-                    text_width, text_height = text_size
-
-                    text_x = (left_lip_x + right_lip_x) // 2 - (text_width // 2)
-                    text_y = (left_lip_y + right_lip_y) // 2 - (text_height // 2)
-
-                    cv2.putText(image, text, (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
-                    cv2.putText(image, text, (text_x, text_y), font, font_scale, color, font_thickness, cv2.LINE_AA)
-
-            cv2.imshow('MediaPipe Face Mesh - Lips Only (Dots)', image)
-
-            if cv2.waitKey(10) == ord('q'):
-                break
+        if cv2.waitKey(10) == ord('q'):
+            break
 
 # Release resources
-cap.release()
+cap_expert.release()
+cap_my.release()
 cv2.destroyAllWindows()
